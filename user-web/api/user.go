@@ -136,7 +136,6 @@ func PassWordLogin(ctx *gin.Context) {
 		zap.S().Errorw("[GetUserList] 连接 [用户服务失败]", "msg", err.Error())
 	}
 
-	fmt.Println("连接用户grpc服务")
 	// 调用用户服务
 	userSrvClient := proto.NewUserClient(userConn)
 
