@@ -86,6 +86,11 @@ func GetUserList(ctx *gin.Context) {
 	if err != nil {
 		zap.S().Errorw("[GetUserList] 连接 [用户服务失败]", "msg", err.Error())
 	}
+
+	if claims, claimsErr := ctx.Get("claims"); !!claimsErr {
+		currentUser := claims.(*models.CustomClaims)
+		zap.S().Infof("访问用户：%d", currentUser.ID)
+	}
 	// 调用用户服务
 	userSrvClient := proto.NewUserClient(userConn)
 
