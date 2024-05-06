@@ -131,9 +131,15 @@ func GetUserList(ctx *gin.Context) {
 func PassWordLogin(ctx *gin.Context) {
 	//表单验证
 	passWordLoginForm := forms.PassWordLoginForm{}
-
 	if err := ctx.ShouldBind(&passWordLoginForm); err != nil {
 		HandlerValidatorError(ctx, err)
+		return
+	}
+
+	if !store.Verify(passWordLoginForm.CaptchaId, passWordLoginForm.Captcha, true) {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"captcha": "验证码错误",
+		})
 		return
 	}
 
