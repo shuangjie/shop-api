@@ -1,0 +1,14 @@
+name: 'user-web'
+port: 8021
+user_srv:
+  host: '127.0.0.1'
+  port: 50051
+
+jwt:
+  key: 'owKmuVhcrHqPh^FRD@r8iCQZPiyz5PEO'
+
+aliyun-sms:
+  region_id: 'cn-shenzhen'
+  access_key_id: 'Your Access Key ID'
+  access_key_secret: 'Your Access Key Secret'
+  sign_name: 'xxx'
