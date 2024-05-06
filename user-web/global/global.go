@@ -8,4 +8,5 @@ import (
 var (
 	Trans        ut.Translator
 	ServerConfig *config.ServerConfig = &config.ServerConfig{}
+	SigningKey   *config.JWTConfig    = &config.JWTConfig{}
 )

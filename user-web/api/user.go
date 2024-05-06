@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"net/http"
+	"shop-api/user-web/middlewares"
+	"shop-api/user-web/models"
 	"strconv"
 	"strings"
 	"time"
@@ -168,12 +171,31 @@ func PassWordLogin(ctx *gin.Context) {
 			})
 		} else {
 			if passRsp.Success {
-				ctx.JSON(http.StatusOK, gin.H{
-					"msg": "登录成功",
-					"data": gin.H{
-						"nick_name": rsp.NickName,
-						"mobile":    rsp.Mobile,
+				//生成 token
+				j := middlewares.NewJWT()
+				claims := models.CustomClaims{
+					ID:          uint(rsp.Id),
+					NickName:    rsp.NickName,
+					AuthorityId: uint(rsp.Role),
+					StandardClaims: jwt.StandardClaims{
+						NotBefore: time.Now().Unix() - 1000,       // 签名生效时间
+						ExpiresAt: time.Now().Unix() + 60*60*24*7, // 过期时间 7 天
+						Issuer:    "Tomato",                       //签名的发行者
 					},
+				}
+				token, tokenErr := j.CreateToken(claims)
+				if tokenErr != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{
+						"msg": "生成token失败",
+					})
+					return
+				}
+
+				ctx.JSON(http.StatusOK, gin.H{
+					"id":         rsp.Id,
+					"token":      token,
+					"nick_name":  rsp.NickName,
+					"expired_at": (time.Now().Unix() + 60*60*24*7) * 1000,
 				})
 			} else {
 				ctx.JSON(http.StatusOK, gin.H{
