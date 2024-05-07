@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"net/http"
-	"shop-api/user-web/middlewares"
-	"shop-api/user-web/models"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -22,6 +21,8 @@ import (
 	"shop-api/user-web/forms"
 	"shop-api/user-web/global"
 	"shop-api/user-web/global/response"
+	"shop-api/user-web/middlewares"
+	"shop-api/user-web/models"
 	"shop-api/user-web/proto"
 )
 
@@ -67,13 +68,13 @@ func HandlerValidatorError(ctx *gin.Context, err error) {
 	ok := errors.As(err, &errs)
 	if !ok {
 		// 非validator.ValidationErrors类型错误直接返回
-		ctx.JSON(http.StatusOK, gin.H{
+		ctx.JSON(http.StatusBadRequest, gin.H{
 			"msg": err.Error(),
 		})
 		return
 	}
 	// validator.ValidationErrors类型错误则进行翻译
-	ctx.JSON(http.StatusOK, gin.H{
+	ctx.JSON(http.StatusBadRequest, gin.H{
 		"msg": removeTopStruct(errs.Translate(global.Trans)),
 	})
 	return
@@ -217,4 +218,80 @@ func PassWordLogin(ctx *gin.Context) {
 		}
 
 	}
+}
+
+func Register(c *gin.Context) {
+	//注册
+	registerForm := forms.RegisterForm{}
+	if err := c.ShouldBind(&registerForm); err != nil {
+		HandlerValidatorError(c, err)
+		return
+	}
+
+	//短信验证码校验
+	rdb := redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%s:%d", global.ServerConfig.RedisInfo.Host, global.ServerConfig.RedisInfo.Port),
+	})
+	val, err := rdb.Get(context.Background(), registerForm.Mobile).Result()
+	if errors.Is(err, redis.Nil) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"msg": "验证码错误",
+		})
+		return
+	} else {
+		if val != registerForm.Code {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"msg": "验证码错误",
+			})
+			return
+		}
+	}
+
+	//连接用户grpc服务
+	//tlsConfig := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+	userConn, err := grpc.Dial(fmt.Sprintf("%s:%d", global.ServerConfig.UserSrvInfo.Host, global.ServerConfig.UserSrvInfo.Port), grpc.WithInsecure())
+	if err != nil {
+		zap.S().Errorw("[Register] 连接 [用户服务失败]", "msg", err.Error())
+	}
+
+	//调用用户服务
+	userSrvClient := proto.NewUserClient(userConn)
+	user, err := userSrvClient.CreateUser(context.Background(), &proto.CreateUserInfo{
+		NickName: registerForm.Mobile,
+		Mobile:   registerForm.Mobile,
+		PassWord: registerForm.PassWord,
+	})
+
+	if err != nil {
+		zap.S().Errorw("[Register] 注册用户失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, c)
+		return
+	}
+
+	j := middlewares.NewJWT()
+	claims := models.CustomClaims{
+		ID:          uint(user.Id),
+		NickName:    user.NickName,
+		AuthorityId: uint(user.Role),
+		StandardClaims: jwt.StandardClaims{
+			NotBefore: time.Now().Unix() - 1000,       // 签名生效时间
+			ExpiresAt: time.Now().Unix() + 60*60*24*7, // 过期时间 7 天
+			Issuer:    "Tomato",                       //签名的发行者
+		},
+	}
+	token, tokenErr := j.CreateToken(claims)
+	if tokenErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"msg": "生成token失败",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":         user.Id,
+		"token":      token,
+		"nick_name":  user.NickName,
+		"expired_at": (time.Now().Unix() + 60*60*24*7) * 1000,
+	})
+
 }
