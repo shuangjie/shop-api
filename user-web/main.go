@@ -14,13 +14,19 @@ import (
 )
 
 func main() {
-	// 初始化
+	// 初始化日志
 	initialize.InitLogger()
+	// 初始化配置
 	initialize.InitConfig()
+	// 初始化翻译器
 	router := initialize.Routers()
+
 	if err := initialize.InitTrans("zh"); err != nil {
 		zap.S().Panic("初始化翻译器失败", err.Error())
 	}
+
+	// 初始化srv连接
+	initialize.InitSrvConn()
 
 	// 注册验证器
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
