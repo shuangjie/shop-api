@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
-	ut "github.com/go-playground/universal-translator"
 
 	"github.com/gin-gonic/gin/binding"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"shop-api/user-web/global"
 	"shop-api/user-web/initialize"
+	"shop-api/user-web/utils"
 	validator2 "shop-api/user-web/validator"
 )
 
@@ -27,6 +29,16 @@ func main() {
 
 	// 初始化srv连接
 	initialize.InitSrvConn()
+
+	viper.AutomaticEnv()
+	// 本地开发环境端口号固定，生产环境则随机获取
+	env := viper.GetBool("SHOP_ENV_DEV")
+	if !env {
+		port, err := utils.GetFreePort()
+		if err == nil {
+			global.ServerConfig.Port = port
+		}
+	}
 
 	// 注册验证器
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
