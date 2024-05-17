@@ -57,5 +57,15 @@ func (r *Registry) Register(address string, port int, name string, tags []string
 }
 
 func (r *Registry) DeRegister(serviceId string) error {
-	return nil
+	cfg := api.DefaultConfig()
+	//cfg.Address = "127.0.0.1:8500"
+	cfg.Address = fmt.Sprintf("%s:%d", r.Host, r.Port)
+
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.Agent().ServiceDeregister(serviceId)
+	return err
 }
