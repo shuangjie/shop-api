@@ -198,3 +198,47 @@ func New(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rsp)
 
 }
+
+func Detail(ctx *gin.Context) {
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"msg": "参数错误",
+		})
+		return
+	}
+
+	rsp, err := global.GoodsSrvClient.GetGoodsDetail(context.Background(), &proto.GoodInfoRequest{Id: int32(goodsId)})
+	if err != nil {
+		zap.S().Errorw("[Detail] 查询商品详情失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	//TODO 去库存服务查询库存
+	goodsInfo := map[string]interface{}{
+		"id":          rsp.Id,
+		"name":        rsp.Name,
+		"goods_brief": rsp.GoodsBrief,
+		"desc":        rsp.GoodsDesc,
+		"ship_free":   rsp.ShipFree,
+		"images":      rsp.Images,
+		"desc_images": rsp.DescImages,
+		"front_image": rsp.GoodsFrontImage,
+		"shop_price":  rsp.ShopPrice,
+		"category": map[string]interface{}{
+			"id":   rsp.Category.Id,
+			"name": rsp.Category.Name,
+		},
+		"brand": map[string]interface{}{
+			"id":   rsp.Brand.Id,
+			"name": rsp.Brand.Name,
+			"logo": rsp.Brand.Logo,
+		},
+		"is_hot":  rsp.IsHot,
+		"is_new":  rsp.IsNew,
+		"on_sale": rsp.OnSale,
+	}
+	ctx.JSON(http.StatusOK, goodsInfo)
+}
