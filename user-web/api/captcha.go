@@ -12,7 +12,7 @@ var store = base64Captcha.DefaultMemStore
 func GetCaptcha(ctx *gin.Context) {
 	driver := base64Captcha.NewDriverDigit(80, 240, 5, 0.7, 80)
 	cp := base64Captcha.NewCaptcha(driver, store)
-	id, b64s, _, err := cp.Generate() // 忽略answer
+	id, b64s, answer, err := cp.Generate() // todo 要忽略answer
 	if err != nil {
 		zap.S().Errorf("生成验证码失败: %s", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -24,7 +24,7 @@ func GetCaptcha(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"captchaId": id,
 		"picPath":   b64s,
-		//"answer":    answer,
+		"answer":    answer,
 	})
 
 }

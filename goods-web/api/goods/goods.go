@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"shop-api/goods-web/forms"
 	"strconv"
 	"strings"
 
@@ -71,6 +72,7 @@ func HandlerValidatorError(ctx *gin.Context, err error) {
 	return
 }
 
+// List 商品列表
 func List(ctx *gin.Context) {
 	// 商品的列表
 	request := &proto.GoodsFilterRequest{}
@@ -161,4 +163,82 @@ func List(ctx *gin.Context) {
 	// 返回数据
 	ctx.JSON(http.StatusOK, reMap)
 
+}
+
+// New 新增商品
+func New(ctx *gin.Context) {
+	goodsForm := forms.GoodsForm{}
+	if err := ctx.ShouldBindJSON(&goodsForm); err != nil {
+		HandlerValidatorError(ctx, err)
+		return
+	}
+	goodsClient := global.GoodsSrvClient
+	rsp, err := goodsClient.CreateGoods(context.Background(), &proto.CreateGoodsInfo{
+		Name:            goodsForm.Name,
+		GoodsSn:         goodsForm.GoodsSn,
+		Stocks:          goodsForm.Stocks,
+		MarketPrice:     goodsForm.MarketPrice,
+		ShopPrice:       goodsForm.ShopPrice,
+		GoodsBrief:      goodsForm.GoodsBrief,
+		ShipFree:        *goodsForm.ShipFree,
+		Images:          goodsForm.Images,
+		DescImages:      goodsForm.DescImages,
+		GoodsFrontImage: goodsForm.FrontImage,
+		CategoryId:      goodsForm.CategoryId,
+		BrandId:         goodsForm.Brand,
+	})
+
+	if err != nil {
+		zap.S().Errorw("[New] 新增商品失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	// todo: 商品库存，和分布式事务一起做
+	ctx.JSON(http.StatusOK, rsp)
+
+}
+
+func Detail(ctx *gin.Context) {
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"msg": "参数错误",
+		})
+		return
+	}
+
+	rsp, err := global.GoodsSrvClient.GetGoodsDetail(context.Background(), &proto.GoodInfoRequest{Id: int32(goodsId)})
+	if err != nil {
+		zap.S().Errorw("[Detail] 查询商品详情失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	//TODO 去库存服务查询库存
+	goodsInfo := map[string]interface{}{
+		"id":          rsp.Id,
+		"name":        rsp.Name,
+		"goods_brief": rsp.GoodsBrief,
+		"desc":        rsp.GoodsDesc,
+		"ship_free":   rsp.ShipFree,
+		"images":      rsp.Images,
+		"desc_images": rsp.DescImages,
+		"front_image": rsp.GoodsFrontImage,
+		"shop_price":  rsp.ShopPrice,
+		"category": map[string]interface{}{
+			"id":   rsp.Category.Id,
+			"name": rsp.Category.Name,
+		},
+		"brand": map[string]interface{}{
+			"id":   rsp.Brand.Id,
+			"name": rsp.Brand.Name,
+			"logo": rsp.Brand.Logo,
+		},
+		"is_hot":  rsp.IsHot,
+		"is_new":  rsp.IsNew,
+		"on_sale": rsp.OnSale,
+	}
+	ctx.JSON(http.StatusOK, goodsInfo)
 }

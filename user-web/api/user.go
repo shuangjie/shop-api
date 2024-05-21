@@ -171,9 +171,9 @@ func PassWordLogin(ctx *gin.Context) {
 					NickName:    rsp.NickName,
 					AuthorityId: uint(rsp.Role),
 					StandardClaims: jwt.StandardClaims{
-						NotBefore: time.Now().Unix() - 1000,       // 签名生效时间
-						ExpiresAt: time.Now().Unix() + 60*60*24*7, // 过期时间 7 天
-						Issuer:    "Tomato",                       //签名的发行者
+						NotBefore: time.Now().Unix() - 1000,        // 签名生效时间
+						ExpiresAt: time.Now().Unix() + 60*60*24*60, // 过期时间 60 天
+						Issuer:    "Tomato",                        //签名的发行者
 					},
 				}
 				token, tokenErr := j.CreateToken(claims)
