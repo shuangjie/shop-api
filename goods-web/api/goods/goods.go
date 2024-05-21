@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"shop-api/goods-web/forms"
 	"strconv"
 	"strings"
 
@@ -71,6 +72,7 @@ func HandlerValidatorError(ctx *gin.Context, err error) {
 	return
 }
 
+// List 商品列表
 func List(ctx *gin.Context) {
 	// 商品的列表
 	request := &proto.GoodsFilterRequest{}
@@ -160,5 +162,39 @@ func List(ctx *gin.Context) {
 
 	// 返回数据
 	ctx.JSON(http.StatusOK, reMap)
+
+}
+
+// New 新增商品
+func New(ctx *gin.Context) {
+	goodsForm := forms.GoodsForm{}
+	if err := ctx.ShouldBindJSON(&goodsForm); err != nil {
+		HandlerValidatorError(ctx, err)
+		return
+	}
+	goodsClient := global.GoodsSrvClient
+	rsp, err := goodsClient.CreateGoods(context.Background(), &proto.CreateGoodsInfo{
+		Name:            goodsForm.Name,
+		GoodsSn:         goodsForm.GoodsSn,
+		Stocks:          goodsForm.Stocks,
+		MarketPrice:     goodsForm.MarketPrice,
+		ShopPrice:       goodsForm.ShopPrice,
+		GoodsBrief:      goodsForm.GoodsBrief,
+		ShipFree:        *goodsForm.ShipFree,
+		Images:          goodsForm.Images,
+		DescImages:      goodsForm.DescImages,
+		GoodsFrontImage: goodsForm.FrontImage,
+		CategoryId:      goodsForm.CategoryId,
+		BrandId:         goodsForm.Brand,
+	})
+
+	if err != nil {
+		zap.S().Errorw("[New] 新增商品失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	// todo: 商品库存，和分布式事务一起做
+	ctx.JSON(http.StatusOK, rsp)
 
 }
