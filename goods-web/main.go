@@ -48,7 +48,7 @@ func main() {
 		zap.S().Panic("注册服务失败", err.Error())
 	}
 
-	zap.S().Infof("goods-web服务启动中..., 端口: %d", global.ServerConfig.Port)
+	zap.S().Debugf("goods-web服务启动中..., 端口: %d", global.ServerConfig.Port)
 	go func() {
 		if err := router.Run(fmt.Sprintf(":%d", global.ServerConfig.Port)); err != nil {
 			zap.S().Panic("goods-web服务启动失败", err.Error())
@@ -60,7 +60,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	if err = registerClient.DeRegister(serviceId); err != nil {
-		zap.S().Panic("注销服务失败", err.Error())
+		zap.S().Info("注销服务失败", err.Error())
 	} else {
 		zap.S().Info("goods-web服务注销成功")
 	}
