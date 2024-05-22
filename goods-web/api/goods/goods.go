@@ -199,13 +199,12 @@ func New(ctx *gin.Context) {
 
 }
 
+// Detail 商品详情
 func Detail(ctx *gin.Context) {
 	id := ctx.Param("id")
 	goodsId, err := strconv.Atoi(id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{
-			"msg": "参数错误",
-		})
+		ctx.Status(http.StatusNotFound)
 		return
 	}
 
@@ -241,4 +240,103 @@ func Detail(ctx *gin.Context) {
 		"on_sale": rsp.OnSale,
 	}
 	ctx.JSON(http.StatusOK, goodsInfo)
+}
+
+// Delete 删除商品
+func Delete(ctx *gin.Context) {
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
+	_, err = global.GoodsSrvClient.DeleteGoods(context.Background(), &proto.DeleteGoodsInfo{Id: int32(goodsId)})
+	if err != nil {
+		zap.S().Errorw("[Delete] 删除商品失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	// ctx.Status(http.StatusOK)
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": "删除成功",
+	})
+}
+
+// Stock 商品库存
+func Stock(ctx *gin.Context) {
+	id := ctx.Param("id")
+	_, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
+	// TODO 调用库存服务查询库存
+	return
+}
+
+func UpdateStatus(ctx *gin.Context) {
+	goodsStatusForm := forms.GoodsStatusForm{}
+	if err := ctx.ShouldBindJSON(&goodsStatusForm); err != nil {
+		HandlerValidatorError(ctx, err)
+		return
+	}
+
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if _, err = global.GoodsSrvClient.UpdateGoods(context.Background(), &proto.CreateGoodsInfo{
+		Id:     int32(goodsId),
+		IsHot:  *goodsStatusForm.IsNew,
+		IsNew:  *goodsStatusForm.IsNew,
+		OnSale: *goodsStatusForm.OnSale,
+	}); err != nil {
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": "修改成功",
+	})
+}
+
+func Update(ctx *gin.Context) {
+	goodsForm := forms.GoodsForm{}
+	if err := ctx.ShouldBindJSON(&goodsForm); err != nil {
+		HandlerValidatorError(ctx, err)
+		return
+	}
+
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.Status(http.StatusNotFound)
+		return
+	}
+
+	_, err = global.GoodsSrvClient.UpdateGoods(context.Background(), &proto.CreateGoodsInfo{
+		Id:              int32(goodsId),
+		Name:            goodsForm.Name,
+		GoodsSn:         goodsForm.GoodsSn,
+		Stocks:          goodsForm.Stocks,
+		MarketPrice:     goodsForm.MarketPrice,
+		ShopPrice:       goodsForm.ShopPrice,
+		GoodsBrief:      goodsForm.GoodsBrief,
+		ShipFree:        *goodsForm.ShipFree,
+		Images:          goodsForm.Images,
+		DescImages:      goodsForm.DescImages,
+		GoodsFrontImage: goodsForm.FrontImage,
+		CategoryId:      goodsForm.CategoryId,
+		BrandId:         goodsForm.Brand,
+	})
+
+	if err != nil {
+		zap.S().Errorw("[Update] 更新商品失败", "msg", err.Error())
+		HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"msg": "修改成功",
+	})
 }
