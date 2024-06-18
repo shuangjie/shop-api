@@ -7,7 +7,7 @@ import (
 )
 
 func InitShopCartRouter(Router *gin.RouterGroup) {
-	ShopCartRouter := Router.Group("shopcarts").Use(middlewares.JWTAuth())
+	ShopCartRouter := Router.Group("shop_cart").Use(middlewares.JWTAuth())
 	{
 		ShopCartRouter.GET("", middlewares.JWTAuth(), middlewares.IsAdminAuth(), shop_cart.List) // 获取购物车列表
 		ShopCartRouter.POST("", middlewares.JWTAuth(), shop_cart.New)                            // 新建购物车
