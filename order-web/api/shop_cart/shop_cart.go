@@ -3,6 +3,7 @@ package shop_cart
 import (
 	"context"
 	"net/http"
+	"shop-api/order-web/forms"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -12,6 +13,7 @@ import (
 	"shop-api/order-web/proto"
 )
 
+// List 获取购物车列表
 func List(ctx *gin.Context) {
 	userId, _ := ctx.Get("userId")
 	rsp, err := global.OrderSrvClient.CartItemList(context.Background(), &proto.UserInfo{
@@ -70,11 +72,59 @@ func List(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, reMap)
-	return
 }
 
+// New 添加购物车
 func New(ctx *gin.Context) {
+	// 1. 参数校验
+	itemForm := forms.ShopCartForm{}
+	if err := ctx.ShouldBindJSON(&itemForm); err != nil {
+		api.HandlerValidatorError(ctx, err)
+		return
+	}
 
+	// 2. 查询商品信息
+	_, err := global.GoodsSrvClient.GetGoodsDetail(context.Background(), &proto.GoodInfoRequest{
+		Id: itemForm.GoodsId,
+	})
+	if err != nil {
+		zap.S().Errorw("[New] 查询 [商品信息] 失败")
+		api.HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	// 3. 查询库存信息（库存是否充足）
+	invRsp, err := global.InventSrvClient.InvDetail(context.Background(), &proto.GoodsInvInfo{
+		GoodsId: itemForm.GoodsId,
+	})
+	if err != nil {
+		zap.S().Errorw("[New] 查询 [库存] 失败")
+		api.HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+	if invRsp.Num < itemForm.Nums {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "库存不足",
+		})
+		return
+	}
+
+	// 4. 添加购物车
+	userId, _ := ctx.Get("userId")
+	rsp, err := global.OrderSrvClient.CreateCartItem(context.Background(), &proto.CartItemRequest{
+		GoodsId: itemForm.GoodsId,
+		UserId:  int32(userId.(uint)),
+		Nums:    itemForm.Nums,
+	})
+	if err != nil {
+		zap.S().Errorw("[New] 添加 [购物车] 失败")
+		api.HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"id": rsp.Id,
+	})
 }
 
 func Detail(ctx *gin.Context) {
