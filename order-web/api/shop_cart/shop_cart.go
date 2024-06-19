@@ -193,5 +193,3 @@ func Update(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, nil)
 }
-
-func Detail(ctx *gin.Context) {}

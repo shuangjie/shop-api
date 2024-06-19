@@ -11,7 +11,6 @@ func InitShopCartRouter(Router *gin.RouterGroup) {
 	{
 		ShopCartRouter.GET("", middlewares.JWTAuth(), middlewares.IsAdminAuth(), shop_cart.List) // 获取购物车列表
 		ShopCartRouter.POST("", middlewares.JWTAuth(), shop_cart.New)                            // 新建购物车
-		ShopCartRouter.GET("/:id", middlewares.JWTAuth(), shop_cart.Detail)                      // 购物车详情
 		ShopCartRouter.PATCH("/:id", middlewares.JWTAuth(), shop_cart.Update)                    // 更新购物车
 		ShopCartRouter.DELETE("/:id", middlewares.JWTAuth(), shop_cart.Delete)                   // 删除购物车 这个 id 是商品的id
 	}
