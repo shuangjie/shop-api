@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"shop-api/order-web/forms"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -135,6 +136,29 @@ func Update(ctx *gin.Context) {
 
 }
 
+// Delete 删除购物车
 func Delete(ctx *gin.Context) {
+	// 获取商品 id
+	id := ctx.Param("id")
+	i, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "参数错误",
+		})
+		return
+	}
 
+	// 删除购物车
+	userId, _ := ctx.Get("userId")
+	_, err = global.OrderSrvClient.DeleteCartItem(context.Background(), &proto.CartItemRequest{
+		GoodsId: int32(i),
+		UserId:  userId.(int32),
+	})
+	if err != nil {
+		zap.S().Errorw("[Delete] 删除 [购物车] 失败")
+		api.HandlerGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, nil)
 }
