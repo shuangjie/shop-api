@@ -143,7 +143,7 @@ func Delete(ctx *gin.Context) {
 	userId, _ := ctx.Get("userId")
 	_, err = global.OrderSrvClient.DeleteCartItem(context.Background(), &proto.CartItemRequest{
 		GoodsId: int32(id),
-		UserId:  userId.(int32),
+		UserId:  int32(userId.(uint)),
 	})
 	if err != nil {
 		zap.S().Errorw("[Delete] 删除 [购物车] 失败")
@@ -176,7 +176,7 @@ func Update(ctx *gin.Context) {
 	// 2. 更新购物车
 	userId, _ := ctx.Get("userId")
 	request := proto.CartItemRequest{
-		UserId:  userId.(int32),
+		UserId:  int32(userId.(uint)),
 		GoodsId: int32(goodsId),
 		Nums:    form.Nums,
 		Checked: false,
