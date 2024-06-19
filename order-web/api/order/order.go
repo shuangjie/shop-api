@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"shop-api/order-web/api"
+	"shop-api/order-web/forms"
 	"shop-api/order-web/global"
 	"shop-api/order-web/models"
 	"shop-api/order-web/proto"
@@ -39,7 +40,7 @@ func List(ctx *gin.Context) {
 	rsp, err := global.OrderSrvClient.OrderList(context.Background(), &request)
 	if err != nil {
 		zap.S().Errorw("[List] 获取 [订单列表] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -96,7 +97,7 @@ func Detail(ctx *gin.Context) {
 	rsp, err := global.OrderSrvClient.OrderDetail(ctx, &request) // mark: 这里 ctx 和 context.Background() 是一样的
 	if err != nil {
 		zap.S().Errorw("[Detail] 获取 [订单详情] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -129,4 +130,32 @@ func Detail(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, reMap)
 }
 
-func New(context *gin.Context) {}
+func New(ctx *gin.Context) {
+	// 1. 表单验证
+	form := forms.CreateOrderForm{}
+	if err := ctx.ShouldBindJSON(&form); err != nil {
+		api.HandleValidatorError(ctx, err)
+		return
+	}
+
+	// 2. 新建订单
+	userId, _ := ctx.Get("userId")
+	rsp, err := global.OrderSrvClient.CreateOrder(context.Background(), &proto.OrderRequest{
+		UserId:  int32(userId.(uint)),
+		Address: form.Address,
+		Name:    form.Name,
+		Mobile:  form.Mobile,
+		Post:    form.Post,
+	})
+	if err != nil {
+		zap.S().Errorf("[New] 创建 [订单] 失败: %v", err)
+		api.HandleGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	// 返回结果；todo: 应该返回支付 url
+	ctx.JSON(http.StatusOK, gin.H{
+		"id": rsp.Id,
+	})
+
+}
