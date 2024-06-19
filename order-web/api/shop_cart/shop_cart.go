@@ -2,11 +2,11 @@ package shop_cart
 
 import (
 	"context"
-	"net/http"
-	"shop-api/order-web/forms"
-
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"net/http"
+	"shop-api/order-web/forms"
+	"strconv"
 
 	"shop-api/order-web/api"
 	"shop-api/order-web/global"
@@ -21,7 +21,7 @@ func List(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[List] 查询 [购物车列表] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -43,7 +43,7 @@ func List(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[List] 查询 [商品信息] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -79,7 +79,7 @@ func New(ctx *gin.Context) {
 	// 1. 参数校验
 	itemForm := forms.ShopCartForm{}
 	if err := ctx.ShouldBindJSON(&itemForm); err != nil {
-		api.HandlerValidatorError(ctx, err)
+		api.HandleValidatorError(ctx, err)
 		return
 	}
 
@@ -89,7 +89,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 查询 [商品信息] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -99,7 +99,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 查询 [库存] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 	if invRsp.Num < itemForm.Nums {
@@ -118,7 +118,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 添加 [购物车] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -127,14 +127,69 @@ func New(ctx *gin.Context) {
 	})
 }
 
-func Detail(ctx *gin.Context) {
-
-}
-
-func Update(ctx *gin.Context) {
-
-}
-
+// Delete 删除购物车
 func Delete(ctx *gin.Context) {
+	// 获取商品 id
+	goodsId := ctx.Param("id")
+	id, err := strconv.Atoi(goodsId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "参数错误",
+		})
+		return
+	}
 
+	// 删除购物车
+	userId, _ := ctx.Get("userId")
+	_, err = global.OrderSrvClient.DeleteCartItem(context.Background(), &proto.CartItemRequest{
+		GoodsId: int32(id),
+		UserId:  int32(userId.(uint)),
+	})
+	if err != nil {
+		zap.S().Errorw("[Delete] 删除 [购物车] 失败")
+		api.HandleGrpcErrorToHttp(err, ctx)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, nil)
+}
+
+// Update 更新购物车
+func Update(ctx *gin.Context) {
+	// 获取商品 id
+	id := ctx.Param("id")
+	goodsId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"msg": "参数错误",
+		})
+		return
+	}
+
+	// 1. 参数校验
+	form := forms.ShopCartUpdateForm{}
+	if err := ctx.ShouldBindJSON(&form); err != nil {
+		api.HandleValidatorError(ctx, err)
+		return
+	}
+
+	// 2. 更新购物车
+	userId, _ := ctx.Get("userId")
+	request := proto.CartItemRequest{
+		UserId:  int32(userId.(uint)),
+		GoodsId: int32(goodsId),
+		Nums:    form.Nums,
+		Checked: false,
+	}
+	if form.Checked != nil {
+		request.Checked = *form.Checked
+	}
+
+	_, err = global.OrderSrvClient.UpdateCartItem(context.Background(), &request)
+	if err != nil {
+		zap.S().Errorw("[Update] 更新 [购物车] 失败")
+		api.HandleGrpcErrorToHttp(err, ctx)
+		return
+	}
+	ctx.JSON(http.StatusOK, nil)
 }

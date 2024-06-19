@@ -7,10 +7,10 @@ import (
 )
 
 func InitOrderRouter(Router *gin.RouterGroup) {
-	OrderRouter := Router.Group("orders")
+	OrderRouter := Router.Group("orders").Use(middlewares.JWTAuth())
 	{
-		OrderRouter.GET("", middlewares.JWTAuth(), middlewares.IsAdminAuth(), order.List) // 获取订单列表
-		OrderRouter.POST("", middlewares.JWTAuth(), order.New)                            // 新建订单
-		OrderRouter.GET("/:id", middlewares.JWTAuth(), order.Detail)                      // 订单详情,可以考虑用订单号
+		OrderRouter.GET("", order.List)       // 获取订单列表
+		OrderRouter.POST("", order.New)       // 新建订单
+		OrderRouter.GET("/:id", order.Detail) // 订单详情,可以考虑用订单号
 	}
 }
