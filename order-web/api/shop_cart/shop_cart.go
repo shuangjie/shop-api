@@ -21,7 +21,7 @@ func List(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[List] 查询 [购物车列表] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -43,7 +43,7 @@ func List(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[List] 查询 [商品信息] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -79,7 +79,7 @@ func New(ctx *gin.Context) {
 	// 1. 参数校验
 	itemForm := forms.ShopCartForm{}
 	if err := ctx.ShouldBindJSON(&itemForm); err != nil {
-		api.HandlerValidatorError(ctx, err)
+		api.HandleValidatorError(ctx, err)
 		return
 	}
 
@@ -89,7 +89,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 查询 [商品信息] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -99,7 +99,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 查询 [库存] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 	if invRsp.Num < itemForm.Nums {
@@ -118,7 +118,7 @@ func New(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[New] 添加 [购物车] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -147,7 +147,7 @@ func Delete(ctx *gin.Context) {
 	})
 	if err != nil {
 		zap.S().Errorw("[Delete] 删除 [购物车] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 
@@ -169,7 +169,7 @@ func Update(ctx *gin.Context) {
 	// 1. 参数校验
 	form := forms.ShopCartUpdateForm{}
 	if err := ctx.ShouldBindJSON(&form); err != nil {
-		api.HandlerValidatorError(ctx, err)
+		api.HandleValidatorError(ctx, err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func Update(ctx *gin.Context) {
 	_, err = global.OrderSrvClient.UpdateCartItem(context.Background(), &request)
 	if err != nil {
 		zap.S().Errorw("[Update] 更新 [购物车] 失败")
-		api.HandlerGrpcErrorToHttp(err, ctx)
+		api.HandleGrpcErrorToHttp(err, ctx)
 		return
 	}
 	ctx.JSON(http.StatusOK, nil)

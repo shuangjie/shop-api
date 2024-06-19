@@ -21,7 +21,7 @@ func removeTopStruct(fields map[string]string) map[string]string {
 	return rsp
 }
 
-func HandlerGrpcErrorToHttp(err error, c *gin.Context) {
+func HandleGrpcErrorToHttp(err error, c *gin.Context) {
 	//将grpc的code转换成http的状态码
 	if err != nil {
 		if e, ok := status.FromError(err); ok {
@@ -52,7 +52,7 @@ func HandlerGrpcErrorToHttp(err error, c *gin.Context) {
 	}
 }
 
-func HandlerValidatorError(c *gin.Context, err error) {
+func HandleValidatorError(c *gin.Context, err error) {
 	var errs validator.ValidationErrors
 	ok := errors.As(err, &errs)
 	if !ok {
