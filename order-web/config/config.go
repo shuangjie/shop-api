@@ -15,6 +15,15 @@ type ConsulConfig struct {
 	Port int    `mapstructure:"port" json:"port"`
 }
 
+type AlipayConfig struct {
+	AppID           string `mapstructure:"app_id" json:"app_id"`
+	PrivateKey      string `mapstructure:"private_key" json:"private_key"`
+	AlipayPublicKey string `mapstructure:"alipay_public_key" json:"alipay_public_key"`
+	IsProduction    bool   `mapstructure:"is_production" json:"is_production"`
+	NotifyURL       string `mapstructure:"notify_url" json:"notify_url"`
+	ReturnURL       string `mapstructure:"return_url" json:"return_url"`
+}
+
 type ServerConfig struct {
 	Name             string       `mapstructure:"name" json:"name"`
 	Host             string       `mapstructure:"host" json:"host"`
@@ -25,6 +34,7 @@ type ServerConfig struct {
 	OrderSrvInfo     SrvConfig    `mapstructure:"order_srv" json:"order_srv"`
 	JWTInfo          JWTConfig    `mapstructure:"jwt" json:"jwt"`
 	ConsulInfo       ConsulConfig `mapstructure:"consul" json:"consul"`
+	AlipayInfo       AlipayConfig `mapstructure:"alipay" json:"alipay"`
 }
 
 type NacosConfig struct {

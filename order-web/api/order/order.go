@@ -2,11 +2,11 @@ package order
 
 import (
 	"context"
-	"net/http"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"net/http"
+	"shop-api/order-web/api/pay"
+	"strconv"
 
 	"shop-api/order-web/api"
 	"shop-api/order-web/forms"
@@ -127,6 +127,13 @@ func Detail(ctx *gin.Context) {
 		list = append(list, tmpMap)
 	}
 	reMap["goods"] = list
+
+	// 如果订单状态是未支付，返回支付链接
+	/** PAYING(待支付), TRADE_SUCCESS(成功)， TRADE_SUCCESS(超时关闭), WAIT_BUYER_PAY(交易创建), TRADE_FINISHED(交易结束) **/
+	//if rsp.OrderInfo.Status == "PAYING" {
+	//	url, _ := pay.GetPayUrl(ctx , rsp.OrderInfo.OrderSn, strconv.FormatFloat(float64(rsp.OrderInfo.Total), 'f', 2, 64))
+	//	reMap["alipay_url"] = url
+	//}
 	ctx.JSON(http.StatusOK, reMap)
 }
 
@@ -153,9 +160,21 @@ func New(ctx *gin.Context) {
 		return
 	}
 
-	// 返回结果；todo: 应该返回支付 url
-	ctx.JSON(http.StatusOK, gin.H{
-		"id": rsp.Id,
-	})
+	// 调用支付宝支付
+	url, err := pay.GetPayUrl(ctx, rsp.OrderSn, strconv.FormatFloat(float64(rsp.Total), 'f', 2, 64))
 
+	if err != nil {
+		zap.S().Errorf("[New] 支付失败: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"msg": "支付失败: " + err.Error(),
+		})
+		return
+	}
+
+	// 返回结果
+	ctx.JSON(http.StatusOK, gin.H{
+		"id":         rsp.Id,
+		"order_sn":   rsp.OrderSn,
+		"alipay_url": url,
+	})
 }
